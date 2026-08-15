@@ -1,0 +1,10 @@
+node_modules/
+.next/
+coverage/
+dashboard/
+.playwright-mcp/
+*-audit.png
+.DS_Store
+.env
+.env.*
+!.env.example
