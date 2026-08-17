@@ -18,6 +18,12 @@ Updated: 2026-08-17
 - Release checks passed previously: 5 fixture-era tests, lint, production build, page/metadata/PNG smoke checks, visual QA in both themes, and public production verification. New deterministic snapshot tests cover good data, cadence mismatch, malformed/HTTP response, insufficient depth, and seed isolation.
 - Vercel preview deployments are account-login protected. Run public sharing checks against the production alias rather than preview URLs.
 
+## 2026-08-17 dynamic snapshot production release
+
+- Published the source-stamped Truth Card implementation (50683f1) and its Singapore regional compatibility fix (00ff042) to the public main branch.
+- Verified the public production alias end-to-end: the API returned a validated Binance/Bybit BTCUSDT snapshot with four Binance and three Bybit provenance records, comparable 8h cadence, a SHA-256 snapshot ID, and a 15-second cache reuse. The page and 1200x630 Open Graph image rendered the modeled/not-executable evidence correctly.
+- Vercel Functions execute in sin1. The default iad1 execution region returned Binance HTTP 451; sin1 returned validated public source data. This is an upstream compatibility setting, never a proxy or fallback, and every source failure remains explicitly unavailable.
+
 ## Next milestone
 
-Audit and publish this dynamic snapshot milestone, then attach a custom domain and verify it in Google Search Console. A durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
+Attach a custom domain and verify it in Google Search Console. A durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
