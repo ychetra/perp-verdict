@@ -71,6 +71,14 @@ Updated: 2026-08-17
 - The homepage retains live venue state and the light/dark control; documentation pages retain the same visual/navigation frame without dead in-page Scanner anchors. Old duplicated navigation markup and CSS were removed.
 - Verified locally with 15 tests, lint, production build, and clean diff, then publicly on all four routes. The documentation Scanner link resolves to `/#scanner`.
 
+## 2026-08-17 multipair coverage release
+
+- Published `c6c99e7`, expanding homepage coverage from the four seed pairs to a dynamically selected maximum of 25 liquid Binance USD-M × Bybit linear USDT perpetual intersections. Selection requires active instrument metadata, exact normalized base/symbol agreement, matching funding cadence, Binance funding-interval overrides, paginated Bybit metadata, and strictly positive 24h volume on both venues. Ranking uses the lower of the two venue volumes.
+- The universe route is public/read-only, cached for 15 minutes, noindexed, and executes in Singapore through the existing project-wide Vercel `sin1` configuration. Missing sources, mismatched cadence, stale/missing quotes or books, insufficient visible depth, and unsupported pairs remain visibly unavailable. New pairs never inherit seed values.
+- The four prior seeds remain an explicitly labelled interactive fallback while the universe is unavailable/connecting. Unknown asset symbols render a neutral generic mark instead of an incorrect BTC mark. Theme controls remain functional in loading/unavailable states.
+- Independent proof: 20 tests, lint, production build, clean diff, and local plus public `/api/universe` checks returned `kind: available`, 25 validated pairs, BTCUSDT first, an 8h cadence, 15-minute cache headers, and `X-Robots-Tag: noindex, nofollow`.
+- Additional venue research was deliberately not shipped: current OKX and Bitget API terms make public redistribution/display of their market data legally uncertain. Obtain written permission before enabling either venue; do not infer consent from a working public endpoint.
+
 ## Next milestone
 
-Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap and discover the four stable URLs. If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. Then observe the linked-news endpoint for real source availability and decide whether source-balanced AI selection adds enough value; a durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
+Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap and discover the four stable URLs. If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. Observe the 25-pair client stream long enough to confirm reconnect/load behavior before expanding coverage, and obtain written public-display permission before adding any further venue. A durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
