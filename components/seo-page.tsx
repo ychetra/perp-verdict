@@ -1,10 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { SiteNav } from "@/components/site-nav";
 
 type SeoPageKey = "methodology" | "funding-arbitrage" | "faq";
 
-const links: Array<{ href: string; label: string; key?: SeoPageKey }> = [
-  { href: "/", label: "Live scanner" },
+const links: Array<{ href: string; label: string; key?: SeoPageKey | "scanner" }> = [
+  { href: "/#scanner", label: "Scanner", key: "scanner" },
   { href: "/methodology", label: "Methodology", key: "methodology" },
   { href: "/funding-arbitrage", label: "Funding guide", key: "funding-arbitrage" },
   { href: "/faq", label: "FAQ", key: "faq" },
@@ -58,12 +59,7 @@ export function SeoPage({
   children: ReactNode;
 }) {
   return <main className="seo-shell">
-    <header className="seo-header">
-      <Link className="seo-wordmark" href="/" aria-label="Perp Verdict home"><span className="wordmark-sigil">PV</span><span>Perp Verdict</span></Link>
-      <nav className="seo-nav" aria-label="Guide navigation">
-        {links.map((link) => <Link key={link.href} className={link.key === active ? "seo-nav-active" : undefined} href={link.href} aria-current={link.key === active ? "page" : undefined}>{link.label}</Link>)}
-      </nav>
-    </header>
+    <SiteNav active={active} />
     <article>
       <div className="seo-hero">
         <div>
@@ -79,12 +75,12 @@ export function SeoPage({
       </div>
       <div className="seo-content">{children}</div>
     </article>
-    <footer className="seo-footer"><span>READ-ONLY MARKET DATA / NO KEYS / NO ORDERS</span><Link href="/">Open the live scanner →</Link></footer>
+    <footer className="seo-footer"><span>READ-ONLY MARKET DATA / NO KEYS / NO ORDERS</span><Link href="/#scanner">Open the live scanner →</Link></footer>
   </main>;
 }
 
 export function SeoLinks({ current }: { current: SeoPageKey }) {
-  const otherLinks = links.filter((link) => link.key && link.key !== current);
+  const otherLinks = links.filter((link) => link.key && link.key !== current && link.key !== "scanner");
   return <aside className="seo-next" aria-label="Continue reading">
     <span className="seo-section-label">Continue reading</span>
     <div>{otherLinks.map((link) => <Link key={link.href} href={link.href}>{link.label} <span aria-hidden="true">→</span></Link>)}</div>

@@ -8,6 +8,7 @@ import type { FundingLeg, Opportunity, Venue } from "@/lib/types";
 import { AssetMark } from "@/components/asset-mark";
 import { BrandMark } from "@/components/brand-mark";
 import { NewsBriefs } from "@/components/news-briefs";
+import { SiteNav } from "@/components/site-nav";
 
 type Theme = "dark" | "light";
 const THEME_CHANGE_EVENT = "perp-verdict-theme-change";
@@ -204,7 +205,7 @@ function subscribeTheme(onStoreChange: () => void) {
 export function FundingRealityCheck() {
   const { quotes, books, connection } = usePublicMarketData();
   const [now, setNow] = useState(Date.now);
-  const theme = useSyncExternalStore(subscribeTheme, currentTheme, () => "light");
+  const theme = useSyncExternalStore<Theme>(subscribeTheme, currentTheme, () => "light");
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedSymbol, setSelectedSymbol] = useState("ETHUSDT");
   const [shareState, setShareState] = useState<"idle" | "success" | "failed">("idle");
@@ -244,19 +245,8 @@ export function FundingRealityCheck() {
       window.setTimeout(() => setShareState("idle"), 2400);
     }
   };
-  const feedText = connection === "live" ? "Both venue feeds live" : connection === "partial" ? "One venue feed live" : connection === "fallback" ? "Waiting for public feeds" : "Connecting public feeds";
-
   return <main className="terminal-shell">
-    <header className="command-bar">
-      <a className="wordmark" href="#scanner" aria-label="Perp Verdict scanner"><BrandMark /><span>Perp Verdict</span></a>
-      <nav className="command-nav" aria-label="Perp Verdict navigation">
-        <a className="command-nav-active" href="#scanner">Scanner</a>
-        <a href="/methodology">Methodology</a>
-        <a href="/funding-arbitrage">Funding guide</a>
-        <a href="/faq">FAQ</a>
-      </nav>
-      <div className="command-actions"><span className={`feed-state feed-${connection}`}><i />{feedText}</span><button className="theme-button" onClick={toggleTheme} aria-label="Toggle dark and light mode"><Icon type={theme === "dark" ? "sun" : "moon"} /><span>{theme === "dark" ? "Light" : "Dark"}</span></button></div>
-    </header>
+    <SiteNav active="scanner" connection={connection} theme={theme} onToggleTheme={toggleTheme} />
 
     <section className="market-intro" aria-labelledby="market-title">
       <div className="brief-kicker"><span>LIVE FUNDING MONITOR</span><i /> <span>BINANCE × BYBIT</span><b>Read-only model</b></div>
