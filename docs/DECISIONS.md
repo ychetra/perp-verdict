@@ -16,9 +16,13 @@ Before a public production deployment, move connector ingestion to a dedicated r
 4. serves the browser through a rate-limited public read API; and
 5. never holds trading credentials.
 
+The share-card milestone adds a narrow server-only REST snapshot rather than a persistent feed service. It validates Binance premium/depth/funding history/exchangeInfo and Bybit ticker/order book/instruments-info on demand, records response provenance and hashes in the returned card, and uses a bounded process-local cache for about 15 seconds. Live source timestamps must be within 15 seconds and venue ticker timestamps within 15 seconds of each other. The cache is not durable, globally shared, or a historical feed.
+
 ## Truthful fallbacks
 
 The UI begins with a conservative seed state so a blocked regional endpoint does not leave a blank application. It labels a partially connected feed and changes to `STALE` after the freshness threshold. A fallback is never called live liquidity.
+
+Server Truth Cards have a stricter boundary: they never use `seedInputs`. A missing source, stale time, unproven cadence, malformed envelope, or insufficient depth renders an unavailable card/image.
 
 ## UI implementation choice
 

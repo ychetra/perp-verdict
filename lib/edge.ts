@@ -40,3 +40,8 @@ export function formatUsd(value: number) {
     maximumFractionDigits: value >= 1_000 ? 0 : 2,
   }).format(value);
 }
+
+export function formatCadenceHours(value: number) {
+  const concise = Math.round(value * 60) / 60;
+  return `${Number.isInteger(concise) ? concise : concise.toFixed(2).replace(/0+$/, "").replace(/\.$/, "")}h`;
+}
