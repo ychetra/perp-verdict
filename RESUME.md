@@ -57,6 +57,14 @@ Updated: 2026-08-17
 - No data or execution behavior changed: public WebSockets, pair/filter selection, share cards, theme persistence, reduced-motion behavior, and mobile fallback all remain intact.
 - Verified locally and on `https://perp.chetra.xyz`: 13 tests, lint, production build, clean diff, and rendered navbar/title checks passed. Source commit: `9416616`.
 
+## 2026-08-17 visual identity and sourced-brief release
+
+- Published `e4618be` with a first-party Perp Verdict SVG mark, a self-hosted site icon, and decorative BTC, ETH, SOL, and XRP asset marks in the interactive map and mobile ranking. Asset symbols remain available in the parent button labels for assistive technology.
+- Refreshed `README.md` with the current public source and production URLs, accurate read-only/data-state boundaries, local validation commands, and the visual brand asset.
+- Added the compact `EXTERNAL CONTEXT` brief below the ledger. It fetches only article title, HTTPS URL, publication date, and fixed source label from CoinDesk, Google Blog, and Cloudflare Blog; it renders attribution and outbound links only. It is explicitly excluded from the funding verdict and never provides summaries, sentiment, price claims, or trade calls.
+- The `/api/briefs` endpoint revalidates every 15 minutes, limits feed calls to 5 seconds, tolerates individual source failure, returns a transparent unavailable state only when all feeds fail, and accepts only exact authorized HTTPS hosts with no credentials or custom port. It has no persistence or execution capability.
+- Independent checks: 15 tests, lint, production build, clean diff, public icon HTTP 200, updated homepage markup, and the production API returned live attributed CoinDesk/Cloudflare headlines. Google Blog RSS is also a configured and hostname-validated source; it will appear when its eligible items rank within the three current AI/infrastructure links.
+
 ## Next milestone
 
-Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap and discover the four stable URLs. If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. After discovery, publish one source-grounded comparison or methodology extension only when it adds real user value; a durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
+Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap and discover the four stable URLs. If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. Then observe the linked-news endpoint for real source availability and decide whether source-balanced AI selection adds enough value; a durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
