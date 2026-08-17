@@ -90,7 +90,7 @@ Updated: 2026-08-17
 
 - Replaced the four fixed coin drawings and generic letter-like bubbles with a shared `AssetMark` that renders verified CoinGecko CDN artwork for each current dynamic-universe asset. The map, mobile ranking, selected verdict, and desktop ledger all reuse the same component, so pair presentation stays consistent.
 - URLs are fixed allowlisted HTTPS URLs for `coin-images.coingecko.com`, with a safe CoinCap convention only for future valid tickers not in the current map. Invalid URLs and load failures render a neutral non-letter token glyph; visual artwork never changes modeling, source data, or verdict status.
-- Independent pre-publish proof: all 25 current `https://perp.chetra.xyz/api/universe` assets resolved to HTTP 200 CoinGecko images; 27 tests, lint, production build, and clean-diff checks passed.
+- Published as `ee31789` (`feat: add dynamic asset icons`). Independent proof: all 25 current `https://perp.chetra.xyz/api/universe` assets resolved to HTTP 200 CoinGecko images; 27 tests, lint, production build, clean-diff checks, and a browser visual pass passed. The custom domain served HTTP 200 from `sin1` with the new direct icon markup in the map, selected evidence title, and ledger.
 
 ## Next milestone
 
