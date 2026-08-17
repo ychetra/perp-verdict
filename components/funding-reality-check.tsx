@@ -5,6 +5,9 @@ import { calculateOpportunity, formatBps, formatUsd } from "@/lib/edge";
 import { seedInputs } from "@/lib/sample-data";
 import { verdictUrl } from "@/lib/site";
 import type { FundingLeg, Opportunity, Venue } from "@/lib/types";
+import { AssetMark } from "@/components/asset-mark";
+import { BrandMark } from "@/components/brand-mark";
+import { NewsBriefs } from "@/components/news-briefs";
 
 type Theme = "dark" | "light";
 const THEME_CHANGE_EVENT = "perp-verdict-theme-change";
@@ -245,7 +248,7 @@ export function FundingRealityCheck() {
 
   return <main className="terminal-shell">
     <header className="command-bar">
-      <a className="wordmark" href="#scanner" aria-label="Perp Verdict scanner"><span className="wordmark-sigil">PV</span><span>Perp Verdict</span></a>
+      <a className="wordmark" href="#scanner" aria-label="Perp Verdict scanner"><BrandMark /><span>Perp Verdict</span></a>
       <nav className="command-nav" aria-label="Perp Verdict navigation">
         <a className="command-nav-active" href="#scanner">Scanner</a>
         <a href="/methodology">Methodology</a>
@@ -271,9 +274,9 @@ export function FundingRealityCheck() {
           const x = 8 + (item.grossFundingBps / maxRaw) * 84;
           const y = 50 - (item.modeledNetBps / maxNet) * 35;
           const size = visibleCapacity ? Math.min(72, Math.max(32, 19 + Math.sqrt(visibleCapacity / 1000) * 8)) : 32;
-          return <button key={item.symbol} className={`plot-point point-${item.status} ${selected.symbol === item.symbol ? "point-selected" : ""}`} style={{ "--x": `${x}%`, "--y": `${y}%`, "--point-size": `${size}px` } as React.CSSProperties} onClick={() => setSelectedSymbol(item.symbol)} aria-pressed={selected.symbol === item.symbol} aria-label={`${item.symbol}; ${verdictLabel(item.status)}; funding differential ${formatBps(item.grossFundingBps)}; modeled net ${formatBps(item.modeledNetBps)}${visibleCapacity ? `; visible capacity ${formatUsd(visibleCapacity)}` : "; book capacity unavailable"}`}><span>{item.symbol.replace("USDT", "")}</span></button>;
+          return <button key={item.symbol} className={`plot-point point-${item.status} ${selected.symbol === item.symbol ? "point-selected" : ""}`} style={{ "--x": `${x}%`, "--y": `${y}%`, "--point-size": `${size}px` } as React.CSSProperties} onClick={() => setSelectedSymbol(item.symbol)} aria-pressed={selected.symbol === item.symbol} aria-label={`${item.symbol}; ${verdictLabel(item.status)}; funding differential ${formatBps(item.grossFundingBps)}; modeled net ${formatBps(item.modeledNetBps)}${visibleCapacity ? `; visible capacity ${formatUsd(visibleCapacity)}` : "; book capacity unavailable"}`}><AssetMark symbol={item.symbol} size={Math.max(18, Math.min(30, size * .52))} /></button>;
         })}{filtered.length === 0 && <p className="empty-state">No pairs match this filter.</p>}</div><div className="axis axis-x"><span>LOWER DIFFERENTIAL</span><b>FUNDING DIFFERENTIAL</b><span>HIGHER DIFFERENTIAL</span></div></div>
-        <div className="mobile-ranks" aria-label="Ranked opportunities">{filtered.map((item) => <button key={item.symbol} className={selected.symbol === item.symbol ? "mobile-selected" : ""} onClick={() => setSelectedSymbol(item.symbol)}><span><strong>{item.symbol.replace("USDT", "")}</strong><small>{item.direction}</small></span><i className={`status-dot dot-${item.status}`} /><strong className={item.modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(item.modeledNetBps)}</strong></button>)}</div>
+        <div className="mobile-ranks" aria-label="Ranked opportunities">{filtered.map((item) => <button key={item.symbol} className={selected.symbol === item.symbol ? "mobile-selected" : ""} onClick={() => setSelectedSymbol(item.symbol)}><AssetMark symbol={item.symbol} size={22} /><span><strong>{item.symbol.replace("USDT", "")}</strong><small>{item.direction}</small></span><i className={`status-dot dot-${item.status}`} /><strong className={item.modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(item.modeledNetBps)}</strong></button>)}</div>
         <p className="map-footnote">A circle scales by visible capacity only when both streamed books can cover the selected notional. Missing depth never becomes zero impact.</p>
       </div>
 
@@ -289,7 +292,8 @@ export function FundingRealityCheck() {
     </section>
 
     <section className="ledger-panel" aria-labelledby="ledger-heading"><div className="panel-topline"><div><p className="micro-label">ACCESSIBLE LEDGER</p><h2 id="ledger-heading">Every verdict, in plain rows.</h2></div><p>Keyboard-select any pair to inspect the same cost stack.</p></div><div className="ledger-scroll"><table><thead><tr><th scope="col">Pair</th><th scope="col">Route</th><th scope="col">Funding diff.</th><th scope="col">Costs</th><th scope="col">Modeled net</th><th scope="col">Freshness</th><th scope="col">Verdict</th></tr></thead><tbody>{opportunities.map((item) => <tr key={item.symbol} className={selected.symbol === item.symbol ? "ledger-selected" : ""}><td><button className="pair-button" onClick={() => setSelectedSymbol(item.symbol)}>{item.symbol}</button></td><td>{item.direction}</td><td>{formatBps(item.grossFundingBps)}</td><td>−{item.totalCostBps.toFixed(2)} bp</td><td className={item.modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(item.modeledNetBps)}</td><td>{Math.max(0, Math.round(item.freshnessMs / 1000))}s</td><td><span className={`ledger-status ledger-${item.status}`}>{verdictLabel(item.status)}</span></td></tr>)}</tbody></table></div></section>
+    <NewsBriefs />
     <section className="principle-band"><p><span>Read-only by design.</span> Public feeds, explicit reserves, and a visible cost stack for every pair.</p><div className="principle-band-links"><a href="/methodology">How the model works <Icon type="arrow" /></a><a href="/faq">Read the FAQ <Icon type="arrow" /></a></div></section>
-    <footer><span>PERP VERDICT / PUBLIC BETA</span><span>MODELED · READ ONLY · NO EXECUTION</span><a href="https://github.com/ychetra/perp-verdict" target="_blank" rel="noreferrer">Source ↗</a></footer>
+    <footer><span className="footer-brand"><BrandMark />PERP VERDICT / PUBLIC BETA</span><span>MODELED · READ ONLY · NO EXECUTION</span><a className="source-link" href="https://github.com/ychetra/perp-verdict" target="_blank" rel="noreferrer"><span className="source-glyph" aria-hidden="true">&lt;&gt;</span> View source on GitHub ↗</a></footer>
   </main>;
 }

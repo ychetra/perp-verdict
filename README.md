@@ -1,32 +1,89 @@
 # Perp Verdict
 
-**Perp Verdict** is a live perpetual funding arbitrage scanner that exposes the modeled net result after fees, visible depth, transfer time, and liquidation buffer.
+<p align="center">
+  <img src="https://perp.chetra.xyz/icon.svg" width="72" height="72" alt="Perp Verdict mark">
+</p>
 
-It is deliberately designed to make attractive headline funding rates harder to trust. The scanner compares Binance and Bybit perpetuals, then subtracts declared round-trip fees, order-book impact, a transfer-time reserve, and a liquidation buffer before it shows a modeled net result.
+<h3 align="center">Funding spreads, net of costs.</h3>
 
-## What is included
+<p align="center">
+  A public, read-only scanner for perpetual funding differentials across Binance and Bybit.
+  <br>
+  <a href="https://perp.chetra.xyz">Open the live scanner</a> ·
+  <a href="https://perp.chetra.xyz/methodology">Methodology</a> ·
+  <a href="https://perp.chetra.xyz/funding-arbitrage">Funding guide</a> ·
+  <a href="https://perp.chetra.xyz/faq">FAQ</a>
+</p>
 
-- Guest-first public interface with no exchange keys, accounts, or trading controls.
-- Dark/light mode, defaulting to light and saving a manual dark/light choice.
-- Near-live public WebSocket adapters for Binance USD-M Futures and Bybit linear perpetuals.
-- Shareable `/verdict/[pair]` cards and `/api/verdict/[pair]` responses use server-only, source-stamped Binance/Bybit REST snapshots with a bounded 15-second per-runtime cache. It is not durable, globally shared, or a historical feed.
-- A retail-first scatter map and accessible table that share one calculation model.
-- An expandable cost waterfall, freshness state, and explicit `REVIEW`, `REJECT`, or `STALE` result.
-- Unit tests that prove every configured cost is subtracted and stale data cannot produce a positive verdict.
+<p align="center">
+  <a href="https://github.com/ychetra/perp-verdict"><img src="https://img.shields.io/badge/source-GitHub-16231f?style=flat-square&logo=github&logoColor=white" alt="Source on GitHub"></a>
+  <a href="https://perp.chetra.xyz"><img src="https://img.shields.io/badge/status-read--only-2e7d4f?style=flat-square" alt="Read-only status"></a>
+</p>
 
-## What is intentionally not included
+## Why it exists
 
-- Order placement, API keys, withdrawal/transfer requests, signing, wallet connection, paper fills, or a profit promise.
-- A claim that a displayed opportunity is executable. A positive result means “verify further,” not “trade.”
+Funding rates are easy to compare and easy to misunderstand. Perp Verdict puts a visible cost stack beside the headline differential:
+
+```text
+funding differential
+− round-trip fees
+− visible-book impact or depth reserve
+− transfer-time reserve
+− liquidation buffer
+= modeled net per funding interval
+```
+
+The result is a review aid, not an instruction. `REVIEW` means that the model has not rejected the spread; it does not mean the spread is executable or profitable.
+
+## What you can use
+
+- Live public WebSocket readings from Binance USD-M Futures and Bybit linear perpetuals.
+- A scatter map, asset marks, accessible table, selected-pair evidence panel, and cost waterfall.
+- Shareable `/verdict/[pair]` Truth Cards with source timestamps and a fail-closed validation boundary.
+- A compact, server-refreshed linked-headline brief from CoinDesk, Google Blog, and Cloudflare Blog. It shows only attributed titles, dates, and outbound URLs; it never changes a funding verdict.
+- Readable explanations at [`/methodology`](https://perp.chetra.xyz/methodology), [`/funding-arbitrage`](https://perp.chetra.xyz/funding-arbitrage), and [`/faq`](https://perp.chetra.xyz/faq).
+- Light mode by default, with a manually persisted dark mode and reduced-motion support.
+
+## What it does not do
+
+Perp Verdict does not place orders, connect exchange accounts, request withdrawals, sign transactions, store credentials, or claim that a modeled opportunity is a fill. It is not financial advice, a guarantee, a backtest, or a trading bot.
+
+## Data states and honesty boundaries
+
+The homepage has a clearly labeled seeded interactive fallback so the map remains useful while a public stream connects. Seed values are not presented as live evidence.
+
+Shareable Truth Cards use server-only REST snapshots instead. They validate both venue responses, instrument metadata, source timestamps, funding cadence, ticker skew, freshness, and enough public depth for the configured notional. A failed check renders an unavailable card; it never substitutes seed data. Snapshots use a bounded process-local cache and are not a durable historical feed.
+
+## Architecture
+
+```text
+app/page.tsx                         scanner entry and software metadata
+components/funding-reality-check.tsx client map, ledger, theme, and public streams
+lib/edge.ts                          fee-aware deterministic model
+lib/sample-data.ts                   conservative interactive seed assumptions
+lib/server-snapshot.ts               source-stamped Truth Card validation
+app/verdict/[pair]/                  shareable read-only evidence route
+app/api/verdict/[pair]/              JSON Truth Card endpoint
+app/methodology, funding-arbitrage,
+app/faq                              static, indexable product education
+```
+
+There is no order-management, wallet, exchange-key, or execution layer in this repository.
 
 ## Run locally
 
+Requirements: Node.js 20+ and npm.
+
 ```bash
+git clone https://github.com/ychetra/perp-verdict.git
+cd perp-verdict
 npm install
 npm run dev
 ```
 
-Then open `http://localhost:3000`.
+Open [`http://localhost:3000`](http://localhost:3000). The public stream may be unavailable in some networks; the interface will identify its fallback state.
+
+Before opening a pull request:
 
 ```bash
 npm test
@@ -34,8 +91,20 @@ npm run lint
 npm run build
 ```
 
-## Implementation note
+## Contributing
 
-The interactive UI starts with conservative seed assumptions so it remains usable when a public venue stream is unavailable. Shareable Truth Cards never use those seeds: their server-only REST snapshot validates both venue envelopes, trading perpetual instrument metadata, source timestamps, 15-second freshness, ticker skew, observed funding cadence, and enough public depth for the configured notional. Any failed validation returns an unavailable card rather than demo numbers. Venue-reported ticker funding is labeled separately from Binance's latest settled funding history, and all responses are read-only with no persistence or execution boundary.
+Read [`docs/PRODUCT.md`](docs/PRODUCT.md), [`docs/DATA-CONTRACT.md`](docs/DATA-CONTRACT.md), and [`docs/DECISIONS.md`](docs/DECISIONS.md) first. Keep model inputs explicit, preserve venue/source labels, and add tests for every new cost or validation rule. Do not add execution paths, credentials, fake performance claims, or a news-driven verdict without a documented source and provenance boundary.
 
-Read [the product brief](docs/PRODUCT.md), [data contract](docs/DATA-CONTRACT.md), and [architecture decisions](docs/DECISIONS.md) before extending the calculation or connector set.
+Small design improvements are welcome when they preserve keyboard access, light-first behavior, reduced motion, mobile ranking fallback, and the read-only contract.
+
+## License and limits
+
+This project is open source for inspection and collaboration. It is provided as-is for educational and research use. Market data can be delayed, incomplete, unavailable, or inconsistent between venues; always verify venue rules, fees, funding cadence, transfer constraints, margin requirements, and liquidation mechanics independently.
+
+## Links
+
+- Live app: <https://perp.chetra.xyz>
+- Source: <https://github.com/ychetra/perp-verdict>
+- Methodology: <https://perp.chetra.xyz/methodology>
+- Funding arbitrage guide: <https://perp.chetra.xyz/funding-arbitrage>
+- FAQ: <https://perp.chetra.xyz/faq>
