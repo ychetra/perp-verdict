@@ -28,7 +28,13 @@ Updated: 2026-08-17
 
 - Attached and verified `perp.chetra.xyz` for the Vercel project through Cloudflare. HTTPS serves production, and HTTP permanently redirects to HTTPS.
 - Commit 20dc632 changes the canonical site base, Open Graph URLs, schema URLs, sitemap, and robots sitemap reference to `https://perp.chetra.xyz`. The legacy Vercel hostname now advertises the same custom canonical.
-- Cloudflare Managed robots currently permits search indexing but disallows several AI crawler user agents, including GPTBot, ClaudeBot, and Google-Extended. That is a Cloudflare policy decision, not an app rule; decide deliberately whether to allow those agents before treating GEO as complete.
+- Cloudflare's current served `robots.txt` permits indexing, disallows only `/api/` and `/verdict/`, and references the production sitemap. It has no special GPTBot, ClaudeBot, or Google-Extended disallow directives.
+
+## 2026-08-17 Google Search Console verification
+
+- The URL-prefix property for `https://perp.chetra.xyz/` is active. Google Search Console's homepage Live Test reported `URL is available to Google` and `Page can be indexed`.
+- The sitemap was re-submitted successfully. At the time of submission, Search Console retained `Sitemap could not be read` from its prior fetch, but independent public checks returned HTTP 200, `application/xml`, a valid 213-byte sitemap, the expected HTTPS redirect behavior, and the same response to a Googlebot-identifying user agent. `robots.txt` is HTTP 200 and references the exact sitemap URL.
+- Treat the current sitemap error as pending Google reprocessing for 24–48 hours; do not request indexing for the sitemap. If it remains after that window, first inspect Cloudflare Security Events for a verified Googlebot request to `/sitemap.xml` before creating any narrowly scoped bot/WAF skip rule.
 
 ## Next milestone
 
