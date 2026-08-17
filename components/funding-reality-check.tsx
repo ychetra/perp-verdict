@@ -246,16 +246,21 @@ export function FundingRealityCheck() {
   return <main className="terminal-shell">
     <header className="command-bar">
       <a className="wordmark" href="#scanner" aria-label="Perp Verdict scanner"><span className="wordmark-sigil">PV</span><span>Perp Verdict</span></a>
-      <p className="command-context"><span>LIVE PERP FUNDING</span><i />BINANCE <b>×</b> BYBIT</p>
+      <nav className="command-nav" aria-label="Perp Verdict navigation">
+        <a className="command-nav-active" href="#scanner">Scanner</a>
+        <a href="/methodology">Methodology</a>
+        <a href="/funding-arbitrage">Funding guide</a>
+        <a href="/faq">FAQ</a>
+      </nav>
       <div className="command-actions"><span className={`feed-state feed-${connection}`}><i />{feedText}</span><button className="theme-button" onClick={toggleTheme} aria-label="Toggle dark and light mode"><Icon type={theme === "dark" ? "sun" : "moon"} /><span>{theme === "dark" ? "Light" : "Dark"}</span></button></div>
     </header>
 
     <section className="market-intro" aria-labelledby="market-title">
-      <div><p className="micro-label">PERPETUAL FUNDING REALITY CHECK</p><h1 id="market-title">What survives <em>after the trade gets real?</em></h1><p className="intro-copy">A public, read-only scanner for cross-exchange perpetual funding. We put fees, visible-book impact, transfer delay, and liquidation reserve into the same verdict as the headline rate.</p></div>
-      <aside className="method-note"><span>THE RULE</span><strong>Positive is not a trade signal.</strong><p>It only means the stated model has not rejected the spread yet.</p></aside>
+      <div className="brief-kicker"><span>LIVE FUNDING MONITOR</span><i /> <span>BINANCE × BYBIT</span><b>Read-only model</b></div>
+      <div className="brief-copy"><h1 id="market-title">Funding spreads, <em>net of costs.</em></h1><p className="intro-copy">Compare public funding data with fees, visible-book impact, transfer reserve, and liquidation buffer. A positive result is a model state to review, not a trade signal.</p></div>
     </section>
 
-    <section className="pulse-strip" aria-label="Current market state"><div className="pulse-heading"><i />MARKET STATE</div><div><span>TRACKED</span><strong>{symbols.length} perp pairs</strong></div><div><span>BEST RAW DIFFERENTIAL</span><strong>{bestRaw.symbol.replace("USDT", "")} · {formatBps(bestRaw.grossFundingBps)}</strong></div><div><span>BEST MODELED NET</span><strong className={opportunities[0].modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(opportunities[0].modeledNetBps)}</strong></div><div><span>AVERAGE COST DRAG</span><strong>−{averageCost.toFixed(1)} bp</strong></div></section>
+    <section className="pulse-strip" aria-label="Current market state"><div className="pulse-heading"><i /><span>Market state</span></div><div><span>Pairs tracked</span><strong>{symbols.length} perp pairs</strong></div><div><span>Best raw spread</span><strong>{bestRaw.symbol.replace("USDT", "")} · {formatBps(bestRaw.grossFundingBps)}</strong></div><div><span>Best modeled net</span><strong className={opportunities[0].modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(opportunities[0].modeledNetBps)}</strong></div><div><span>Average cost drag</span><strong>−{averageCost.toFixed(1)} bp</strong></div></section>
 
     <section className="scanner-layout" id="scanner">
       <div className="map-panel">
@@ -284,7 +289,7 @@ export function FundingRealityCheck() {
     </section>
 
     <section className="ledger-panel" aria-labelledby="ledger-heading"><div className="panel-topline"><div><p className="micro-label">ACCESSIBLE LEDGER</p><h2 id="ledger-heading">Every verdict, in plain rows.</h2></div><p>Keyboard-select any pair to inspect the same cost stack.</p></div><div className="ledger-scroll"><table><thead><tr><th scope="col">Pair</th><th scope="col">Route</th><th scope="col">Funding diff.</th><th scope="col">Costs</th><th scope="col">Modeled net</th><th scope="col">Freshness</th><th scope="col">Verdict</th></tr></thead><tbody>{opportunities.map((item) => <tr key={item.symbol} className={selected.symbol === item.symbol ? "ledger-selected" : ""}><td><button className="pair-button" onClick={() => setSelectedSymbol(item.symbol)}>{item.symbol}</button></td><td>{item.direction}</td><td>{formatBps(item.grossFundingBps)}</td><td>−{item.totalCostBps.toFixed(2)} bp</td><td className={item.modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(item.modeledNetBps)}</td><td>{Math.max(0, Math.round(item.freshnessMs / 1000))}s</td><td><span className={`ledger-status ledger-${item.status}`}>{verdictLabel(item.status)}</span></td></tr>)}</tbody></table></div></section>
-    <section className="principle-band"><p><span>Perp Verdict</span> makes the costs visible before a headline yield becomes a story.</p><div className="principle-band-links"><a href="/methodology">Methodology <Icon type="arrow" /></a><a href="/funding-arbitrage">Funding guide <Icon type="arrow" /></a><a href="/faq">FAQ <Icon type="arrow" /></a></div></section>
+    <section className="principle-band"><p><span>Read-only by design.</span> Public feeds, explicit reserves, and a visible cost stack for every pair.</p><div className="principle-band-links"><a href="/methodology">How the model works <Icon type="arrow" /></a><a href="/faq">Read the FAQ <Icon type="arrow" /></a></div></section>
     <footer><span>PERP VERDICT / PUBLIC BETA</span><span>MODELED · READ ONLY · NO EXECUTION</span><a href="https://github.com/ychetra/perp-verdict" target="_blank" rel="noreferrer">Source ↗</a></footer>
   </main>;
 }
