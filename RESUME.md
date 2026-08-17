@@ -43,6 +43,13 @@ Updated: 2026-08-17
 - Cloudflare HTTP request analytics for `/sitemap.xml` also showed HTTP 200 response groups for `Googlebot` and `Google-InspectionTool` user agents. The observed 401/403/530 groups were associated with non-Google browser or Claude bot user agents. User-agent labels are not proof of Google IP ownership, but this does not implicate Cloudflare in the Search Console error.
 - No Cloudflare bypass or security change was created: there is no evidence that Cloudflare is blocking Googlebot, and bypassing Browser Integrity Check would weaken protection without an identified cause.
 
+## 2026-08-17 static SEO page release
+
+- Published three static, indexable education pages: `/methodology`, `/funding-arbitrage`, and `/faq`. Each has a unique title/description, self-canonical under `https://perp.chetra.xyz`, Open Graph/Twitter metadata, and truthful `WebPage` plus `BreadcrumbList` JSON-LD. The FAQ deliberately does not use `QAPage` markup.
+- Added the three stable canonical URLs to `sitemap.xml` alongside the home page, and added descriptive homepage and cross-page internal links.
+- The pages preserve the light-first/dark-compatible visual system and read-only boundary. They explicitly distinguish the interactive homepage's clearly labeled seed fallback from server Truth Cards, which continue to fail closed and never use seeds.
+- Verified locally and in production: 13 tests passed, lint passed, production build passed with all three pages static, public rendered titles/canonicals/JSON-LD matched the intended URLs, and the sitemap served HTTP 200 `application/xml` with all four stable URLs.
+
 ## Next milestone
 
-Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap. If it succeeds, build the first indexable static SEO pages (methodology, funding-arbitrage guide, and FAQ). If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. A durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
+Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap and discover the four stable URLs. If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. After discovery, publish one source-grounded comparison or methodology extension only when it adds real user value; a durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
