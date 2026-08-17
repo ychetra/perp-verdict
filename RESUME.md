@@ -65,6 +65,12 @@ Updated: 2026-08-17
 - The `/api/briefs` endpoint revalidates every 15 minutes, limits feed calls to 5 seconds, tolerates individual source failure, returns a transparent unavailable state only when all feeds fail, and accepts only exact authorized HTTPS hosts with no credentials or custom port. It has no persistence or execution capability.
 - Independent checks: 15 tests, lint, production build, clean diff, public icon HTTP 200, updated homepage markup, and the production API returned live attributed CoinDesk/Cloudflare headlines. Google Blog RSS is also a configured and hostname-validated source; it will appear when its eligible items rank within the three current AI/infrastructure links.
 
+## 2026-08-17 shared navigation release
+
+- Published `d2af6d3`, which consolidates the homepage and all three SEO pages behind the single `components/site-nav.tsx` navigation component. It uses the same four essential destinations everywhere: Scanner, Methodology, Funding guide, and FAQ.
+- The homepage retains live venue state and the light/dark control; documentation pages retain the same visual/navigation frame without dead in-page Scanner anchors. Old duplicated navigation markup and CSS were removed.
+- Verified locally with 15 tests, lint, production build, and clean diff, then publicly on all four routes. The documentation Scanner link resolves to `/#scanner`.
+
 ## Next milestone
 
 Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap and discover the four stable URLs. If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. Then observe the linked-news endpoint for real source availability and decide whether source-balanced AI selection adds enough value; a durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
