@@ -36,6 +36,12 @@ Updated: 2026-08-17
 - The sitemap was re-submitted successfully. At the time of submission, Search Console retained `Sitemap could not be read` from its prior fetch, but independent public checks returned HTTP 200, `application/xml`, a valid 213-byte sitemap, the expected HTTPS redirect behavior, and the same response to a Googlebot-identifying user agent. `robots.txt` is HTTP 200 and references the exact sitemap URL.
 - Treat the current sitemap error as pending Google reprocessing for 24–48 hours; do not request indexing for the sitemap. If it remains after that window, first inspect Cloudflare Security Events for a verified Googlebot request to `/sitemap.xml` before creating any narrowly scoped bot/WAF skip rule.
 
+## 2026-08-17 Cloudflare sitemap audit
+
+- A live Cloudflare API audit confirmed the `chetra.xyz` zone is active and proxied. Bot Fight Mode and all AI bot protection modes are disabled; the zone has no custom firewall rules and no IP access rules. Managed WAF and L7 DDoS rules remain active. Browser Integrity Check is enabled at the zone level.
+- Cloudflare does not currently manage the served `robots.txt`; Vercel's application route remains authoritative. Normal and Googlebot-identifying public requests both received HTTP 200 and valid XML from `/sitemap.xml`.
+- No Cloudflare bypass or security change was created: there is no evidence that Cloudflare is blocking Googlebot, and bypassing Browser Integrity Check would weaken protection without an identified cause.
+
 ## Next milestone
 
-Verify `https://perp.chetra.xyz` in Google Search Console and decide the Cloudflare Managed robots policy for AI crawlers. A durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
+Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap. If it succeeds, build the first indexable static SEO pages (methodology, funding-arbitrage guide, and FAQ). If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. A durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
