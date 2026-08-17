@@ -18,6 +18,10 @@ Before a public production deployment, move connector ingestion to a dedicated r
 
 The share-card milestone adds a narrow server-only REST snapshot rather than a persistent feed service. It validates Binance premium/depth/funding history/exchangeInfo and Bybit ticker/order book/instruments-info on demand, records response provenance and hashes in the returned card, and uses a bounded process-local cache for about 15 seconds. Live source timestamps must be within 15 seconds and venue ticker timestamps within 15 seconds of each other. The cache is not durable, globally shared, or a historical feed.
 
+## Regional upstream compatibility
+
+Vercel dynamic Functions are pinned to Singapore (`sin1`) because Binance can return HTTP 451 from some production regions even when the same public GET is reachable locally. This is a routing compatibility measure only: no proxy or alternate provider is introduced. Any upstream error still returns the explicit unavailable result and the app remains read-only/fail-closed.
+
 ## Truthful fallbacks
 
 The UI begins with a conservative seed state so a blocked regional endpoint does not leave a blank application. It labels a partially connected feed and changes to `STALE` after the freshness threshold. A fallback is never called live liquidity.
