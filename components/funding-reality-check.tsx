@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { calculateOpportunity, formatBps, formatUsd } from "@/lib/edge";
 import { seedInputs } from "@/lib/sample-data";
+import { verdictUrl } from "@/lib/site";
 import type { FundingLeg, Opportunity, Venue } from "@/lib/types";
 
 type Theme = "dark" | "light";
+const THEME_CHANGE_EVENT = "perp-verdict-theme-change";
 type Filter = "all" | Opportunity["status"];
 type ConnectionState = "connecting" | "live" | "partial" | "fallback";
 type Book = { bids: [number, number][]; asks: [number, number][] };
@@ -179,17 +181,30 @@ function verdictLabel(status: Opportunity["status"]) {
 }
 
 function currentTheme(): Theme {
-  if (typeof document === "undefined") return "dark";
-  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  if (typeof document === "undefined") return "light";
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+}
+
+function subscribeTheme(onStoreChange: () => void) {
+  if (typeof window === "undefined") return () => undefined;
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === "frc-theme") onStoreChange();
+  };
+  window.addEventListener(THEME_CHANGE_EVENT, onStoreChange);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(THEME_CHANGE_EVENT, onStoreChange);
+    window.removeEventListener("storage", onStorage);
+  };
 }
 
 export function FundingRealityCheck() {
   const { quotes, books, connection } = usePublicMarketData();
   const [now, setNow] = useState(Date.now);
-  const [theme, setTheme] = useState<Theme>(currentTheme);
+  const theme = useSyncExternalStore(subscribeTheme, currentTheme, () => "light");
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedSymbol, setSelectedSymbol] = useState("ETHUSDT");
-  const [copied, setCopied] = useState(false);
+  const [shareState, setShareState] = useState<"idle" | "success" | "failed">("idle");
   const opportunities = useMemo(() => calculateOpportunities(quotes, books, now), [quotes, books, now]);
   const selected = opportunities.find((item) => item.symbol === selectedSymbol) ?? opportunities[0];
   const filtered = filter === "all" ? opportunities : opportunities.filter((item) => item.status === filter);
@@ -213,10 +228,18 @@ export function FundingRealityCheck() {
     document.documentElement.dataset.themeSource = "manual";
     document.documentElement.style.colorScheme = next;
     window.localStorage.setItem("frc-theme", next);
-    setTheme(next);
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   };
   const copyVerdict = async () => {
-    try { await navigator.clipboard.writeText(window.location.href); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { setCopied(false); }
+    const stableUrl = verdictUrl(selected.symbol);
+    try {
+      await navigator.clipboard.writeText(stableUrl);
+      setShareState("success");
+      window.setTimeout(() => setShareState("idle"), 1800);
+    } catch {
+      setShareState("failed");
+      window.setTimeout(() => setShareState("idle"), 2400);
+    }
   };
   const feedText = connection === "live" ? "Both venue feeds live" : connection === "partial" ? "One venue feed live" : connection === "fallback" ? "Waiting for public feeds" : "Connecting public feeds";
 
@@ -256,7 +279,7 @@ export function FundingRealityCheck() {
         <div className="sources-grid"><div><span>BINANCE</span><strong>{(selected.binance.rate * 100).toFixed(4)}%</strong><small>{formatUsd(selected.binance.markPrice)} mark</small></div><div><span>BYBIT</span><strong>{(selected.bybit.rate * 100).toFixed(4)}%</strong><small>{formatUsd(selected.bybit.markPrice)} mark</small></div></div>
         <div className="waterfall" id="method"><div className="waterfall-head"><span>Cost waterfall</span><small>per interval</small></div><div className="waterfall-row yield"><span>Funding differential</span><strong>+{selected.grossFundingBps.toFixed(2)} bp</strong></div><div className="waterfall-row"><span>Round-trip fees</span><strong>−{selected.roundTripFeeBps.toFixed(2)} bp</strong></div><div className="waterfall-row"><span>{capacity ? "Visible-book impact" : "Depth impact reserve"}</span><strong>−{selected.depthSlippageBps.toFixed(2)} bp</strong></div><div className="waterfall-row"><span>Transfer-time reserve</span><strong>−{selected.transferReserveBps.toFixed(2)} bp</strong></div><div className="waterfall-row"><span>Liquidation buffer</span><strong>−{selected.liquidationBufferBps.toFixed(2)} bp</strong></div><div className="waterfall-total"><span>MODELED NET</span><strong>{formatBps(selected.modeledNetBps)}</strong></div></div>
         <div className="evidence-meta"><div><span>FRESHNESS</span><strong>{freshness}s ago</strong></div><div><span>VISIBLE CAPACITY</span><strong>{capacity ? formatUsd(capacity) : "Waiting for books"}</strong></div><div><span>MODEL NOTIONAL</span><strong>{formatUsd(selected.notionalUsd)}</strong></div></div>
-        <button className="share-card" onClick={copyVerdict}><Icon type="copy" />{copied ? "Copied public link" : "Copy this public verdict"}</button><p className="risk-copy">Public market data only. No keys, order routes, transfers, or execution live here. A modeled result is not a fill, guarantee, or recommendation.</p>
+        <button className="share-card" onClick={copyVerdict}><Icon type="copy" />{shareState === "success" ? "Copied public verdict URL" : shareState === "failed" ? "Copy failed — try again" : "Copy this public verdict"}</button><span className="sr-only" role="status" aria-live="polite">{shareState === "success" ? `Copied ${selected.symbol} public verdict URL` : shareState === "failed" ? "Could not copy the verdict URL" : ""}</span><p className="risk-copy">Public market data only. No keys, order routes, transfers, or execution live here. A modeled result is not a fill, guarantee, or recommendation.</p>
       </aside>
     </section>
 
