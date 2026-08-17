@@ -86,6 +86,12 @@ Updated: 2026-08-17
 - Feed state now requires quote plus visible book for the same active symbol at each venue, so it cannot claim a live feed solely because a socket connected. The scanner's existing full-row freshness/depth gate remains unchanged.
 - Published as `a9a7244` (`fix: restore multipair quote validation`). Independent proof: 24 tests, lint, production build, clean diff, local route returned 25 validated Binance quotes, and a 12-second public-protocol probe observed Binance quote/depth plus Bybit ticker/book for all 25 active pairs. The deployed custom domain returned 25 fresh quotes with `Cache-Control: no-store`, `X-Robots-Tag: noindex, nofollow`, and a `sin1` Vercel execution ID; the same 12-second production protocol probe validated all 25 pairs. No order, key, transfer, account, or seed-data path was added.
 
+## 2026-08-17 dynamic asset-icon release
+
+- Replaced the four fixed coin drawings and generic letter-like bubbles with a shared `AssetMark` that renders verified CoinGecko CDN artwork for each current dynamic-universe asset. The map, mobile ranking, selected verdict, and desktop ledger all reuse the same component, so pair presentation stays consistent.
+- URLs are fixed allowlisted HTTPS URLs for `coin-images.coingecko.com`, with a safe CoinCap convention only for future valid tickers not in the current map. Invalid URLs and load failures render a neutral non-letter token glyph; visual artwork never changes modeling, source data, or verdict status.
+- Independent pre-publish proof: all 25 current `https://perp.chetra.xyz/api/universe` assets resolved to HTTP 200 CoinGecko images; 27 tests, lint, production build, and clean-diff checks passed.
+
 ## Next milestone
 
 Observe reconnect/load behavior under normal use before expanding coverage. Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap and discover the four stable URLs. If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. Obtain written public-display permission before adding any further venue. A durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.

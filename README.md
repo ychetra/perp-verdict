@@ -39,7 +39,7 @@ The result is a review aid, not an instruction. `REVIEW` means that the model ha
 
 - Live public order-book streams from Binance USD-M Futures and Bybit linear perpetuals, plus a server-only, universe-allowlisted Binance `premiumIndex` quote poll. A feed is marked live only after a single active pair has both a validated quote and a visible order book.
 - A server-selected universe of up to 25 active, common USDT perpetuals, ranked by the lower current 24h quote volume across Binance and Bybit. Instrument metadata, Binance funding-interval overrides, Bybit pagination, exact base assets, and matching cadence are required.
-- A scatter map, asset marks, accessible table, selected-pair evidence panel, and cost waterfall.
+- A scatter map, live asset icons, accessible table, selected-pair evidence panel, and cost waterfall. Current universe assets use verified CoinGecko CDN icons; the image is cosmetic and falls back to a neutral token glyph if an allowlisted remote image fails.
 - Shareable `/verdict/[pair]` Truth Cards with source timestamps and a fail-closed validation boundary.
 - A compact, server-refreshed linked-headline brief from CoinDesk, Google Blog, and Cloudflare Blog. It shows only attributed titles, dates, and outbound URLs; it never changes a funding verdict.
 - Readable explanations at [`/methodology`](https://perp.chetra.xyz/methodology), [`/funding-arbitrage`](https://perp.chetra.xyz/funding-arbitrage), and [`/faq`](https://perp.chetra.xyz/faq).

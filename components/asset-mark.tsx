@@ -1,21 +1,43 @@
-type Asset = "BTC" | "ETH" | "SOL" | "XRP" | "generic";
+import { useState } from "react";
 
-function assetFromSymbol(symbol: string): Asset {
+const COINGECKO_ICON_URLS: Record<string, string> = {
+  "1000PEPE": "https://coin-images.coingecko.com/coins/images/29850/large/pepe-token.jpeg?1696528776",
+  ACE: "https://coin-images.coingecko.com/coins/images/33528/large/ACE.png?1702254943", ADA: "https://coin-images.coingecko.com/coins/images/975/large/cardano.png?1696502090", AKE: "https://coin-images.coingecko.com/coins/images/68410/large/akedo.png?1755678461", APR: "https://coin-images.coingecko.com/coins/images/70220/large/capricorn.jpg?1786687781", BEAT: "https://coin-images.coingecko.com/coins/images/70428/large/audiera.png?1761964064", BTC: "https://coin-images.coingecko.com/coins/images/1/large/bitcoin.png?1696501400", BTW: "https://coin-images.coingecko.com/coins/images/71205/large/BTW_Token_200x200.png?1786291907", CHIP: "https://coin-images.coingecko.com/coins/images/102171777/large/CHIP_Token_Logo_Large.png?1776777444", CYS: "https://coin-images.coingecko.com/coins/images/71025/large/cysic.png?1765330348", DOGE: "https://coin-images.coingecko.com/coins/images/5/large/dogecoin.png?1696501409", ETH: "https://coin-images.coingecko.com/coins/images/279/large/ethereum.png?1696501628", GPS: "https://coin-images.coingecko.com/coins/images/53686/large/Separate_logo%EF%BC%88green%EF%BC%89.png?1737033911", H: "https://coin-images.coingecko.com/coins/images/66811/large/H_tokenLogo_original.png?1750581252", HEMI: "https://coin-images.coingecko.com/coins/images/68469/large/hemi.png?1755838145", LINK: "https://coin-images.coingecko.com/coins/images/877/large/Chainlink_Logo_500.png?1760023405", ONDO: "https://coin-images.coingecko.com/coins/images/26580/large/ONDO.png?1696525656", PEPE: "https://coin-images.coingecko.com/coins/images/29850/large/pepe-token.jpeg?1696528776", PORTAL: "https://coin-images.coingecko.com/coins/images/35436/large/portal.jpeg?1708590254", SOL: "https://coin-images.coingecko.com/coins/images/4128/large/solana.png?1718769756", TUT: "https://coin-images.coingecko.com/coins/images/54299/large/image_2025-02-08_18-56-13.png?1739165439", VELVET: "https://coin-images.coingecko.com/coins/images/67194/large/velvet.jpg?1752054592", WLD: "https://coin-images.coingecko.com/coins/images/31069/large/worldcoin.jpeg?1696529903", WLFI: "https://coin-images.coingecko.com/coins/images/50767/large/wlfi.png?1756438915", XRP: "https://coin-images.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png?1696501442", ZEC: "https://coin-images.coingecko.com/coins/images/486/large/Brandmark-Yellow_%281%29.png?1785810558",
+};
+
+const COINGECKO_HOST = "coin-images.coingecko.com";
+const COINCAP_HOST = "assets.coincap.io";
+
+function assetFromSymbol(symbol: string) {
   const asset = symbol.replace(/USDT$/i, "").toUpperCase();
-  return asset === "BTC" || asset === "ETH" || asset === "SOL" || asset === "XRP" ? asset : "generic";
+  return /^[A-Z0-9]+$/.test(asset) ? asset : "";
 }
 
-export function AssetMark({ symbol, size = 20 }: { symbol: string; size?: number }) {
+export function assetIconUrl(symbol: string) {
   const asset = assetFromSymbol(symbol);
-  const colors: Record<Asset, string> = { BTC: "#f7931a", ETH: "#627eea", SOL: "#14f195", XRP: "#23292f", generic: "#68736d" };
-  return (
-    <svg className={`asset-mark asset-${asset.toLowerCase()}`} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <circle cx="12" cy="12" r="11" fill={colors[asset]} />
-      {asset === "BTC" && <path d="M14.9 8.1c-.3-1.2-1.3-1.8-2.8-1.9V4.5h-1.4v1.7H9.6V4.5H8.2v1.8H6.7v1.5h1.1l.6 7.4H7.1v1.5h1.5v1.8H10v-1.8h1.1v1.8h1.4v-1.8c2.1-.2 3.4-1.1 3.5-2.8.1-1.1-.5-1.9-1.6-2.4.8-.5 1.1-1.2.9-2.3Zm-4.2-.2c1.7 0 2.5.3 2.6 1.2.1.9-.7 1.3-2.3 1.3h-.1l-.2-2.5Zm.5 6.9-.2-2.8h.6c1.8 0 2.7.4 2.7 1.4 0 1-1 1.4-2.9 1.4h-.2Z" fill="#fff" />}
-      {asset === "ETH" && <path d="m12 3.3-5.3 8.8L12 15l5.3-2.9L12 3.3Zm0 13.2L6.7 13.5 12 20.7l5.3-7.2L12 16.5Z" fill="#fff" opacity=".92" />}
-      {asset === "SOL" && <><path d="m6.3 7.1 2-2h9.3l-2 2H6.3Zm2.1 4 2-2h7.3l-2 2H8.4Zm-2.7 4.1 2-2H17l-2 2H5.7Z" fill="#0b1210" /><path d="m8.3 5.1-2 2h9.3l2-2H8.3Zm2.1 4-2 2h7.3l2-2h-7.3Zm-2.7 4.1-2 2H15l2-2H7.7Z" fill="#fff" opacity=".9" /></>}
-      {asset === "XRP" && <path d="M6 7.1h2.1l2.2 2.2c.9.9 2.5.9 3.4 0l2.2-2.2H18l-3.1 3.1c-1.6 1.6-4.2 1.6-5.8 0L6 7.1Zm0 9.8h2.1l2.2-2.2c.9-.9 2.5-.9 3.4 0l2.2 2.2H18l-3.1-3.1c-1.6-1.6-4.2-1.6-5.8 0L6 16.9Z" fill="#fff" />}
-      {asset === "generic" && <><circle cx="12" cy="12" r="4.5" fill="none" stroke="#fff" strokeWidth="1.5" /><path d="M12 5.5v2M12 16.5v2M5.5 12h2M16.5 12h2" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" /></>}
-    </svg>
-  );
+  return COINGECKO_ICON_URLS[asset] ?? (asset ? `https://${COINCAP_HOST}/assets/icons/${asset.toLowerCase()}@2x.png` : undefined);
 }
+
+export function isSafeAssetIconUrl(value: string | undefined) {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && (url.hostname === COINGECKO_HOST || url.hostname === COINCAP_HOST) && url.pathname.startsWith("/");
+  } catch { return false; }
+}
+
+function NeutralAssetMark({ size }: { size: number }) {
+  return <svg className="asset-mark asset-generic" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11" fill="#68736d" /><circle cx="12" cy="12" r="4.5" fill="none" stroke="#fff" strokeWidth="1.5" /><path d="M12 5.5v2M12 16.5v2M5.5 12h2M16.5 12h2" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" /></svg>;
+}
+
+export function AssetMark({ symbol, size = 20, decorative = false }: { symbol: string; size?: number; decorative?: boolean }) {
+  const asset = assetFromSymbol(symbol);
+  const url = assetIconUrl(symbol);
+  const [failedUrl, setFailedUrl] = useState<string>();
+  if (!isSafeAssetIconUrl(url) || failedUrl === url) return <NeutralAssetMark size={size} />;
+  // Remote CDN images are deliberate here: Next Image optimization would add a proxy dependency.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img className={`asset-mark asset-${asset.toLowerCase()}`} src={url} width={size} height={size} alt={decorative ? "" : `${asset || "Asset"} icon`} aria-hidden={decorative ? true : undefined} loading="lazy" decoding="async" onError={() => setFailedUrl(url)} />;
+}
+
+export const currentAssetIconSymbols = Object.keys(COINGECKO_ICON_URLS);
