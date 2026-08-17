@@ -9,6 +9,7 @@ import { AssetMark } from "@/components/asset-mark";
 import { BrandMark } from "@/components/brand-mark";
 import { NewsBriefs } from "@/components/news-briefs";
 import { SiteNav } from "@/components/site-nav";
+import { hasLiveVenuePair } from "@/lib/live-market-state";
 
 type Theme = "dark" | "light";
 const THEME_CHANGE_EVENT = "perp-verdict-theme-change";
@@ -20,6 +21,7 @@ type LiveBooks = Record<string, Partial<Record<Venue, Book>>>;
 type UniversePair = { symbol: string; baseAsset: string; fundingIntervalHours: number; commonQuoteVolumeUsd: number; binanceQuoteVolumeUsd: number; bybitQuoteVolumeUsd: number };
 type UniverseState = { kind: "loading" } | { kind: "available"; pairs: UniversePair[] } | { kind: "unavailable"; message: string };
 type ScannerRow = { symbol: string; opportunity?: Opportunity; reason?: string; source: "live" | "seed-fallback" };
+type BinanceQuoteResponse = { kind: "available"; quotes?: Array<{ symbol: string; rate: number; markPrice: number; updatedAt: number }> } | { kind: "unavailable"; message?: string };
 
 const seedSymbols = seedInputs.map(({ symbol }) => symbol);
 const emptyBook: Book = { bids: [], asks: [] };
@@ -117,42 +119,73 @@ function calculateLiveRows(pairs: UniversePair[], quotes: LiveQuotes, books: Liv
   });
 }
 
-function usePublicMarketData(symbols: string[]) {
+function useBinanceQuotePoll(symbolKey: string) {
   const [quotes, setQuotes] = useState<LiveQuotes>({});
+  useEffect(() => {
+    const activeSymbols = new Set(symbolKey.split(",").filter(Boolean));
+    let active = true;
+    let controller: AbortController | undefined;
+
+    const poll = async () => {
+      controller?.abort();
+      const requestController = new AbortController();
+      controller = requestController;
+      const requestTimeout = window.setTimeout(() => requestController.abort(), 6_000);
+      try {
+        const response = await fetch("/api/binance-quotes", { signal: requestController.signal, cache: "no-store", headers: { accept: "application/json" } });
+        if (!response.ok) throw new Error("The Binance public quote source is unavailable.");
+        const result = await response.json() as BinanceQuoteResponse;
+        if (!active || controller !== requestController) return;
+        if (result.kind !== "available" || !Array.isArray(result.quotes)) {
+          setQuotes({});
+          return;
+        }
+        const next: LiveQuotes = {};
+        for (const quote of result.quotes) {
+          if (!activeSymbols.has(quote.symbol) || !Number.isFinite(quote.rate) || !Number.isFinite(quote.markPrice) || !Number.isFinite(quote.updatedAt)) continue;
+          next[quote.symbol] = { Binance: { venue: "Binance", rate: quote.rate, markPrice: quote.markPrice, updatedAt: quote.updatedAt } };
+        }
+        setQuotes(next);
+      } catch (error: unknown) {
+        if (active && controller === requestController) setQuotes({});
+      } finally {
+        window.clearTimeout(requestTimeout);
+      }
+    };
+
+    void poll();
+    const interval = window.setInterval(() => { void poll(); }, 4_000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      controller?.abort();
+    };
+  }, [symbolKey]);
+  return quotes;
+}
+
+function usePublicMarketData(symbols: string[]) {
+  const [venueQuotes, setVenueQuotes] = useState<LiveQuotes>({});
   const [books, setBooks] = useState<LiveBooks>({});
-  const [connection, setConnection] = useState<ConnectionState>("connecting");
 
   const symbolKey = symbols.join(",");
+  const binanceQuotes = useBinanceQuotePoll(symbolKey);
   useEffect(() => {
     const activeSymbols = symbolKey.split(",").filter(Boolean);
     let active = true;
-    let binanceLive = false;
-    let bybitLive = false;
-    const syncState = () => {
-      if (!active) return;
-      setConnection(binanceLive && bybitLive ? "live" : binanceLive || bybitLive ? "partial" : "fallback");
-    };
     const streams = activeSymbols.flatMap((symbol) => {
       const pair = symbol.toLowerCase();
-      return [`${pair}@markPrice@1s`, `${pair}@depth20@500ms`];
+      return [`${pair}@depth20@500ms`];
     });
     const binance = new WebSocket(`wss://fstream.binance.com/stream?streams=${streams.join("/")}`);
-    binance.onopen = () => { binanceLive = true; syncState(); };
-    binance.onclose = () => { binanceLive = false; syncState(); };
-    binance.onerror = syncState;
+    binance.onopen = () => undefined;
+    binance.onclose = () => undefined;
+    binance.onerror = () => undefined;
     binance.onmessage = (event) => {
       const message = JSON.parse(event.data) as { stream?: string; data?: Record<string, unknown> };
       const data = message.data;
       const symbol = String(data?.s ?? "");
-      if (!data || !activeSymbols.includes(symbol)) return;
-      if (message.stream?.includes("markPrice")) {
-        setQuotes((current) => {
-          const previous = current[symbol]?.Binance ?? {};
-          const rate = asNumber(data.r);
-          const markPrice = asNumber(data.p);
-          return { ...current, [symbol]: { ...current[symbol], Binance: { ...previous, venue: "Binance", ...(rate === undefined ? {} : { rate }), ...(markPrice === undefined ? {} : { markPrice }), updatedAt: asNumber(data.E) ?? Date.now() } } };
-        });
-      }
+      if (!active || !data || !activeSymbols.includes(symbol)) return;
       if (message.stream?.includes("depth")) {
         setBooks((current) => ({ ...current, [symbol]: { ...current[symbol], Binance: { bids: levels((data.b ?? []) as [string, string][], true), asks: levels((data.a ?? []) as [string, string][], false), updatedAt: asNumber(data.E) ?? Date.now() } } }));
       }
@@ -163,20 +196,18 @@ function usePublicMarketData(symbols: string[]) {
       if (bybit.readyState === WebSocket.OPEN) bybit.send(JSON.stringify({ op: "ping" }));
     }, 20_000);
     bybit.onopen = () => {
-      bybitLive = true;
       bybit.send(JSON.stringify({ op: "subscribe", args: activeSymbols.flatMap((symbol) => [`tickers.${symbol}`, `orderbook.50.${symbol}`]) }));
-      syncState();
     };
-    bybit.onclose = () => { bybitLive = false; syncState(); };
-    bybit.onerror = syncState;
+    bybit.onclose = () => undefined;
+    bybit.onerror = () => undefined;
     bybit.onmessage = (event) => {
       const message = JSON.parse(event.data) as { topic?: string; type?: "snapshot" | "delta"; ts?: number; data?: Record<string, unknown> };
       const topic = message.topic?.split(".") ?? [];
       const kind = topic[0];
       const symbol = topic.at(-1);
-      if (!symbol || !activeSymbols.includes(symbol) || !message.data) return;
+      if (!active || !symbol || !activeSymbols.includes(symbol) || !message.data) return;
       if (kind === "tickers") {
-        setQuotes((current) => {
+        setVenueQuotes((current) => {
           const previous = current[symbol]?.Bybit ?? {};
           const rate = asNumber(message.data?.fundingRate);
           const markPrice = asNumber(message.data?.markPrice);
@@ -197,6 +228,14 @@ function usePublicMarketData(symbols: string[]) {
     };
     return () => { active = false; window.clearInterval(ping); binance.close(); bybit.close(); };
   }, [symbolKey]);
+  const quotes = useMemo<LiveQuotes>(() => {
+    const merged: LiveQuotes = { ...binanceQuotes };
+    for (const [symbol, venues] of Object.entries(venueQuotes)) merged[symbol] = { ...merged[symbol], ...venues };
+    return merged;
+  }, [binanceQuotes, venueQuotes]);
+  const binanceLive = hasLiveVenuePair(symbols, quotes, books, "Binance");
+  const bybitLive = hasLiveVenuePair(symbols, quotes, books, "Bybit");
+  const connection: ConnectionState = binanceLive && bybitLive ? "live" : binanceLive || bybitLive ? "partial" : "fallback";
   return { quotes, books, connection };
 }
 

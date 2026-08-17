@@ -37,7 +37,7 @@ The result is a review aid, not an instruction. `REVIEW` means that the model ha
 
 ## What you can use
 
-- Live public WebSocket readings from Binance USD-M Futures and Bybit linear perpetuals.
+- Live public order-book streams from Binance USD-M Futures and Bybit linear perpetuals, plus a server-only, universe-allowlisted Binance `premiumIndex` quote poll. A feed is marked live only after a single active pair has both a validated quote and a visible order book.
 - A server-selected universe of up to 25 active, common USDT perpetuals, ranked by the lower current 24h quote volume across Binance and Bybit. Instrument metadata, Binance funding-interval overrides, Bybit pagination, exact base assets, and matching cadence are required.
 - A scatter map, asset marks, accessible table, selected-pair evidence panel, and cost waterfall.
 - Shareable `/verdict/[pair]` Truth Cards with source timestamps and a fail-closed validation boundary.
@@ -51,7 +51,7 @@ Perp Verdict does not place orders, connect exchange accounts, request withdrawa
 
 ## Data states and honesty boundaries
 
-The homepage has a clearly labeled four-pair seeded interactive fallback while the metadata universe or public streams connect. Seed values are not presented as live evidence. Once the validated universe is available, every additional pair waits for both venue quotes and both visible books; it cannot inherit a BTC, ETH, SOL, or XRP seed.
+The homepage has a clearly labeled four-pair seeded interactive fallback while the metadata universe or public streams connect. Seed values are not presented as live evidence. Once the validated universe is available, every additional pair waits for both venue quotes and both visible books; it cannot inherit a BTC, ETH, SOL, or XRP seed. The Binance quote poll accepts only the server-selected universe, rejects stale, future, malformed, and duplicate records, and clears its state on failure.
 
 Shareable Truth Cards use server-only REST snapshots instead. They validate both venue responses, instrument metadata, source timestamps, funding cadence, ticker skew, freshness, and enough public depth for the configured notional. A failed check renders an unavailable card; it never substitutes seed data. Snapshots use a bounded process-local cache and are not a durable historical feed.
 
@@ -63,10 +63,12 @@ components/funding-reality-check.tsx client map, ledger, theme, and public strea
 lib/edge.ts                          fee-aware deterministic model
 lib/sample-data.ts                   conservative interactive seed assumptions
 lib/universe.ts                      server-only active-pair intersection and 24h-volume selection
+lib/binance-quotes.ts                server-only allowlisted Binance quote validation
 lib/server-snapshot.ts               source-stamped Truth Card validation
 app/verdict/[pair]/                  shareable read-only evidence route
 app/api/verdict/[pair]/              JSON Truth Card endpoint
 app/api/universe/                    cached public Binance × Bybit pair universe
+app/api/binance-quotes/              uncached validated Binance quote batch
 app/methodology, funding-arbitrage,
 app/faq                              static, indexable product education
 ```
