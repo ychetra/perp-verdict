@@ -50,6 +50,13 @@ Updated: 2026-08-17
 - The pages preserve the light-first/dark-compatible visual system and read-only boundary. They explicitly distinguish the interactive homepage's clearly labeled seed fallback from server Truth Cards, which continue to fail closed and never use seeds.
 - Verified locally and in production: 13 tests passed, lint passed, production build passed with all three pages static, public rendered titles/canonicals/JSON-LD matched the intended URLs, and the sitemap served HTTP 200 `application/xml` with all four stable URLs.
 
+## 2026-08-17 scanner homepage clarity release
+
+- Published a real homepage navigation linking directly to the scanner, methodology, funding guide, and FAQ while preserving the feed state and light-first theme control.
+- Replaced the oversized marketing-style hero and its redundant aside with a compact evidence briefing; the live opportunity map now reaches the first viewport sooner. The market rail uses quieter sentence-case labels and fewer visual dividers.
+- No data or execution behavior changed: public WebSockets, pair/filter selection, share cards, theme persistence, reduced-motion behavior, and mobile fallback all remain intact.
+- Verified locally and on `https://perp.chetra.xyz`: 13 tests, lint, production build, clean diff, and rendered navbar/title checks passed. Source commit: `9416616`.
+
 ## Next milestone
 
 Wait 24–48 hours for Google Search Console to reprocess the newly submitted sitemap and discover the four stable URLs. If it remains unreadable, inspect the actual Googlebot event in Cloudflare Security Events before considering a narrowly scoped exception. After discovery, publish one source-grounded comparison or methodology extension only when it adds real user value; a durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
