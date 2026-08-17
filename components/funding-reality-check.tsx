@@ -14,11 +14,14 @@ type Theme = "dark" | "light";
 const THEME_CHANGE_EVENT = "perp-verdict-theme-change";
 type Filter = "all" | Opportunity["status"];
 type ConnectionState = "connecting" | "live" | "partial" | "fallback";
-type Book = { bids: [number, number][]; asks: [number, number][] };
+type Book = { bids: [number, number][]; asks: [number, number][]; updatedAt?: number };
 type LiveQuotes = Record<string, Partial<Record<Venue, Partial<FundingLeg>>>>;
 type LiveBooks = Record<string, Partial<Record<Venue, Book>>>;
+type UniversePair = { symbol: string; baseAsset: string; fundingIntervalHours: number; commonQuoteVolumeUsd: number; binanceQuoteVolumeUsd: number; bybitQuoteVolumeUsd: number };
+type UniverseState = { kind: "loading" } | { kind: "available"; pairs: UniversePair[] } | { kind: "unavailable"; message: string };
+type ScannerRow = { symbol: string; opportunity?: Opportunity; reason?: string; source: "live" | "seed-fallback" };
 
-const symbols = seedInputs.map(({ symbol }) => symbol);
+const seedSymbols = seedInputs.map(({ symbol }) => symbol);
 const emptyBook: Book = { bids: [], asks: [] };
 
 function asNumber(value: unknown) {
@@ -74,7 +77,7 @@ function capacityFor(opportunity: Opportunity, books: LiveBooks) {
   return shortCapacity && longCapacity ? Math.min(shortCapacity, longCapacity) : null;
 }
 
-function calculateOpportunities(quotes: LiveQuotes, books: LiveBooks, now: number) {
+function calculateFallbackOpportunities(quotes: LiveQuotes, books: LiveBooks, now: number) {
   return seedInputs.map((seed) => {
     const binance = { ...seed.binance, ...quotes[seed.symbol]?.Binance };
     const bybit = { ...seed.bybit, ...quotes[seed.symbol]?.Bybit };
@@ -89,12 +92,39 @@ function calculateOpportunities(quotes: LiveQuotes, books: LiveBooks, now: numbe
   }).sort((a, b) => b.modeledNetBps - a.modeledNetBps);
 }
 
-function usePublicMarketData() {
+function calculateLiveRows(pairs: UniversePair[], quotes: LiveQuotes, books: LiveBooks, now: number): ScannerRow[] {
+  return pairs.map((pair) => {
+    const binanceQuote = quotes[pair.symbol]?.Binance;
+    const bybitQuote = quotes[pair.symbol]?.Bybit;
+    const binanceBook = books[pair.symbol]?.Binance;
+    const bybitBook = books[pair.symbol]?.Bybit;
+    if (binanceQuote?.rate === undefined || binanceQuote.markPrice === undefined || binanceQuote.updatedAt === undefined || bybitQuote?.rate === undefined || bybitQuote.markPrice === undefined || bybitQuote.bid === undefined || bybitQuote.ask === undefined || bybitQuote.updatedAt === undefined || !binanceBook?.bids.length || !binanceBook.asks.length || !bybitBook?.bids.length || !bybitBook.asks.length) {
+      return { symbol: pair.symbol, source: "live", reason: "Waiting for both venue quotes and order books." };
+    }
+    const highVenue: Venue = binanceQuote.rate >= bybitQuote.rate ? "Binance" : "Bybit";
+    const lowVenue: Venue = highVenue === "Binance" ? "Bybit" : "Binance";
+    const highBook = highVenue === "Binance" ? binanceBook : bybitBook;
+    const lowBook = lowVenue === "Binance" ? binanceBook : bybitBook;
+    const sellImpact = vwapImpactBps(highBook.bids, 10_000);
+    const buyImpact = vwapImpactBps(lowBook.asks, 10_000);
+    if (sellImpact === null || buyImpact === null) return { symbol: pair.symbol, source: "live", reason: "Visible books do not cover the model notional." };
+    const binanceBid = binanceBook.bids[0]?.[0];
+    const binanceAsk = binanceBook.asks[0]?.[0];
+    if (binanceBid === undefined || binanceAsk === undefined) return { symbol: pair.symbol, source: "live", reason: "Binance top-of-book is unavailable." };
+    const input: FundingLeg = { venue: "Binance", rate: binanceQuote.rate, markPrice: binanceQuote.markPrice, bid: binanceBid, ask: binanceAsk, updatedAt: Math.min(binanceQuote.updatedAt, binanceBook.updatedAt ?? binanceQuote.updatedAt) };
+    const bybit: FundingLeg = { venue: "Bybit", rate: bybitQuote.rate, markPrice: bybitQuote.markPrice, bid: bybitQuote.bid, ask: bybitQuote.ask, updatedAt: Math.min(bybitQuote.updatedAt, bybitBook.updatedAt ?? bybitQuote.updatedAt) };
+    return { symbol: pair.symbol, source: "live", opportunity: calculateOpportunity({ symbol: pair.symbol, binance: input, bybit, notionalUsd: 10_000, roundTripFeeBps: 12, depthSlippageBps: sellImpact + buyImpact, transferReserveBps: 4, liquidationBufferBps: 9 }, now) };
+  });
+}
+
+function usePublicMarketData(symbols: string[]) {
   const [quotes, setQuotes] = useState<LiveQuotes>({});
   const [books, setBooks] = useState<LiveBooks>({});
   const [connection, setConnection] = useState<ConnectionState>("connecting");
 
+  const symbolKey = symbols.join(",");
   useEffect(() => {
+    const activeSymbols = symbolKey.split(",").filter(Boolean);
     let active = true;
     let binanceLive = false;
     let bybitLive = false;
@@ -102,7 +132,7 @@ function usePublicMarketData() {
       if (!active) return;
       setConnection(binanceLive && bybitLive ? "live" : binanceLive || bybitLive ? "partial" : "fallback");
     };
-    const streams = symbols.flatMap((symbol) => {
+    const streams = activeSymbols.flatMap((symbol) => {
       const pair = symbol.toLowerCase();
       return [`${pair}@markPrice@1s`, `${pair}@depth20@500ms`];
     });
@@ -114,7 +144,7 @@ function usePublicMarketData() {
       const message = JSON.parse(event.data) as { stream?: string; data?: Record<string, unknown> };
       const data = message.data;
       const symbol = String(data?.s ?? "");
-      if (!data || !symbols.includes(symbol)) return;
+      if (!data || !activeSymbols.includes(symbol)) return;
       if (message.stream?.includes("markPrice")) {
         setQuotes((current) => {
           const previous = current[symbol]?.Binance ?? {};
@@ -124,7 +154,7 @@ function usePublicMarketData() {
         });
       }
       if (message.stream?.includes("depth")) {
-        setBooks((current) => ({ ...current, [symbol]: { ...current[symbol], Binance: { bids: levels((data.b ?? []) as [string, string][], true), asks: levels((data.a ?? []) as [string, string][], false) } } }));
+        setBooks((current) => ({ ...current, [symbol]: { ...current[symbol], Binance: { bids: levels((data.b ?? []) as [string, string][], true), asks: levels((data.a ?? []) as [string, string][], false), updatedAt: asNumber(data.E) ?? Date.now() } } }));
       }
     };
 
@@ -134,7 +164,7 @@ function usePublicMarketData() {
     }, 20_000);
     bybit.onopen = () => {
       bybitLive = true;
-      bybit.send(JSON.stringify({ op: "subscribe", args: symbols.flatMap((symbol) => [`tickers.${symbol}`, `orderbook.50.${symbol}`]) }));
+      bybit.send(JSON.stringify({ op: "subscribe", args: activeSymbols.flatMap((symbol) => [`tickers.${symbol}`, `orderbook.50.${symbol}`]) }));
       syncState();
     };
     bybit.onclose = () => { bybitLive = false; syncState(); };
@@ -144,7 +174,7 @@ function usePublicMarketData() {
       const topic = message.topic?.split(".") ?? [];
       const kind = topic[0];
       const symbol = topic.at(-1);
-      if (!symbol || !symbols.includes(symbol) || !message.data) return;
+      if (!symbol || !activeSymbols.includes(symbol) || !message.data) return;
       if (kind === "tickers") {
         setQuotes((current) => {
           const previous = current[symbol]?.Bybit ?? {};
@@ -160,13 +190,13 @@ function usePublicMarketData() {
         const asks = (message.data.a ?? []) as [string, string][];
         setBooks((current) => {
           const old = current[symbol]?.Bybit ?? emptyBook;
-          const next = message.type === "snapshot" ? { bids: levels(bids, true), asks: levels(asks, false) } : { bids: patchLevels(old.bids, bids, true), asks: patchLevels(old.asks, asks, false) };
+          const next = message.type === "snapshot" ? { bids: levels(bids, true), asks: levels(asks, false), updatedAt: message.ts ?? Date.now() } : { bids: patchLevels(old.bids, bids, true), asks: patchLevels(old.asks, asks, false), updatedAt: message.ts ?? Date.now() };
           return { ...current, [symbol]: { ...current[symbol], Bybit: next } };
         });
       }
     };
     return () => { active = false; window.clearInterval(ping); binance.close(); bybit.close(); };
-  }, []);
+  }, [symbolKey]);
   return { quotes, books, connection };
 }
 
@@ -203,28 +233,37 @@ function subscribeTheme(onStoreChange: () => void) {
 }
 
 export function FundingRealityCheck() {
-  const { quotes, books, connection } = usePublicMarketData();
+  const [universe, setUniverse] = useState<UniverseState>({ kind: "loading" });
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/universe", { signal: controller.signal, headers: { accept: "application/json" } })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("The public pair universe is unavailable.");
+        return response.json() as Promise<{ kind?: string; pairs?: UniversePair[]; message?: string }>;
+      })
+      .then((result) => {
+        if (result.kind === "available" && Array.isArray(result.pairs) && result.pairs.length > 0) setUniverse({ kind: "available", pairs: result.pairs });
+        else setUniverse({ kind: "unavailable", message: result.message ?? "The public pair universe is unavailable." });
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setUniverse({ kind: "unavailable", message: error instanceof Error ? error.message : "The public pair universe is unavailable." });
+      });
+    return () => controller.abort();
+  }, []);
+  const fallbackMode = universe.kind !== "available";
+  const activeSymbols = universe.kind === "available" ? universe.pairs.map((pair) => pair.symbol) : seedSymbols;
+  const { quotes, books, connection } = usePublicMarketData(activeSymbols);
   const [now, setNow] = useState(Date.now);
   const theme = useSyncExternalStore<Theme>(subscribeTheme, currentTheme, () => "light");
   const [filter, setFilter] = useState<Filter>("all");
   const [selectedSymbol, setSelectedSymbol] = useState("ETHUSDT");
   const [shareState, setShareState] = useState<"idle" | "success" | "failed">("idle");
-  const opportunities = useMemo(() => calculateOpportunities(quotes, books, now), [quotes, books, now]);
-  const selected = opportunities.find((item) => item.symbol === selectedSymbol) ?? opportunities[0];
+  const rows = useMemo<ScannerRow[]>(() => fallbackMode ? calculateFallbackOpportunities(quotes, books, now).map((opportunity) => ({ symbol: opportunity.symbol, opportunity, source: "seed-fallback" })) : universe.kind === "available" ? calculateLiveRows(universe.pairs, quotes, books, now) : [], [fallbackMode, universe, quotes, books, now]);
+  const opportunities = useMemo(() => rows.flatMap((row) => row.opportunity ? [row.opportunity] : []).sort((a, b) => b.modeledNetBps - a.modeledNetBps), [rows]);
+  const selectedRow = rows.find((row) => row.symbol === selectedSymbol && row.opportunity) ?? rows.find((row) => row.opportunity) ?? rows[0];
+  const selected = selectedRow?.opportunity;
   const filtered = filter === "all" ? opportunities : opportunities.filter((item) => item.status === filter);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(interval);
-  }, []);
-
-  if (!selected) return null;
-  const maxRaw = Math.max(...opportunities.map((item) => item.grossFundingBps), 1);
-  const maxNet = Math.max(...opportunities.map((item) => Math.abs(item.modeledNetBps)), 1);
-  const bestRaw = opportunities.reduce((best, item) => item.grossFundingBps > best.grossFundingBps ? item : best, opportunities[0]);
-  const averageCost = opportunities.reduce((total, item) => total + item.totalCostBps, 0) / opportunities.length;
-  const capacity = capacityFor(selected, books);
-  const freshness = Math.max(0, Math.round(selected.freshnessMs / 1_000));
 
   const toggleTheme = () => {
     const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
@@ -234,6 +273,20 @@ export function FundingRealityCheck() {
     window.localStorage.setItem("frc-theme", next);
     window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   };
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  if (!selected) return <main className="terminal-shell"><SiteNav active="scanner" connection={connection} theme={theme} onToggleTheme={toggleTheme} /><section className="unavailable-panel" aria-live="polite"><p className="micro-label">PUBLIC PAIR UNIVERSE</p><h1>Waiting for validated market data.</h1><p>{universe.kind === "loading" ? "Loading active Binance × Bybit perpetuals and current 24h volume." : "No pair has both venue quotes and visible order books yet. The scanner will show a verdict only after those public messages arrive."}</p></section></main>;
+  const maxRaw = Math.max(...opportunities.map((item) => item.grossFundingBps), 1);
+  const maxNet = Math.max(...opportunities.map((item) => Math.abs(item.modeledNetBps)), 1);
+  const bestRaw = opportunities.reduce((best, item) => item.grossFundingBps > best.grossFundingBps ? item : best, opportunities[0]);
+  const averageCost = opportunities.reduce((total, item) => total + item.totalCostBps, 0) / opportunities.length;
+  const capacity = capacityFor(selected, books);
+  const freshness = Math.max(0, Math.round(selected.freshnessMs / 1_000));
+
   const copyVerdict = async () => {
     const stableUrl = verdictUrl(selected.symbol);
     try {
@@ -249,15 +302,16 @@ export function FundingRealityCheck() {
     <SiteNav active="scanner" connection={connection} theme={theme} onToggleTheme={toggleTheme} />
 
     <section className="market-intro" aria-labelledby="market-title">
-      <div className="brief-kicker"><span>LIVE FUNDING MONITOR</span><i /> <span>BINANCE × BYBIT</span><b>Read-only model</b></div>
+      <div className="brief-kicker"><span>LIVE FUNDING MONITOR</span><i /> <span>BINANCE × BYBIT</span><b>{fallbackMode ? "Seeded interactive fallback" : "Metadata-selected public universe"}</b></div>
       <div className="brief-copy"><h1 id="market-title">Funding spreads, <em>net of costs.</em></h1><p className="intro-copy">Compare public funding data with fees, visible-book impact, transfer reserve, and liquidation buffer. A positive result is a model state to review, not a trade signal.</p></div>
     </section>
 
-    <section className="pulse-strip" aria-label="Current market state"><div className="pulse-heading"><i /><span>Market state</span></div><div><span>Pairs tracked</span><strong>{symbols.length} perp pairs</strong></div><div><span>Best raw spread</span><strong>{bestRaw.symbol.replace("USDT", "")} · {formatBps(bestRaw.grossFundingBps)}</strong></div><div><span>Best modeled net</span><strong className={opportunities[0].modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(opportunities[0].modeledNetBps)}</strong></div><div><span>Average cost drag</span><strong>−{averageCost.toFixed(1)} bp</strong></div></section>
+    <section className="pulse-strip" aria-label="Current market state"><div className="pulse-heading"><i /><span>Market state</span></div><div><span>Pairs tracked</span><strong>{fallbackMode ? `${seedSymbols.length} seeded pairs` : `${rows.length} selected pairs`}</strong></div><div><span>Best raw spread</span><strong>{bestRaw.symbol.replace("USDT", "")} · {formatBps(bestRaw.grossFundingBps)}</strong></div><div><span>Best modeled net</span><strong className={opportunities[0].modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(opportunities[0].modeledNetBps)}</strong></div><div><span>Average cost drag</span><strong>−{averageCost.toFixed(1)} bp</strong></div></section>
 
     <section className="scanner-layout" id="scanner">
       <div className="map-panel">
         <div className="panel-topline"><div><p className="micro-label">OPPORTUNITY MAP</p><h2>Raw spread vs. modeled net</h2></div><div className="segmented" aria-label="Opportunity filter">{(["all", "watch", "rejected", "stale"] as Filter[]).map((option) => <button key={option} className={filter === option ? "active" : ""} onClick={() => setFilter(option)}>{option === "all" ? "All" : verdictLabel(option)}</button>)}</div></div>
+        {!fallbackMode && rows.some((row) => !row.opportunity) && <p className="universe-status">{rows.filter((row) => !row.opportunity).length} selected pairs are visibly waiting for both venue quotes and books. No values are estimated.</p>}
         <div className="map-key"><span><i className="key-raw" />Horizontal: funding differential</span><span><i className="key-net" />Vertical: net after costs</span><span><i className="key-size" />Area: visible book capacity</span></div>
         <div className="scatter-wrap" role="group" aria-label="Interactive funding differential scatter plot"><div className="axis axis-y"><span>MODELED NET</span><b>+</b><i>0</i><b>−</b></div><div className="plot"><span className="plot-zero"><i>Break-even after costs</i></span>{filtered.map((item) => {
           const visibleCapacity = capacityFor(item, books);
@@ -281,7 +335,7 @@ export function FundingRealityCheck() {
       </aside>
     </section>
 
-    <section className="ledger-panel" aria-labelledby="ledger-heading"><div className="panel-topline"><div><p className="micro-label">ACCESSIBLE LEDGER</p><h2 id="ledger-heading">Every verdict, in plain rows.</h2></div><p>Keyboard-select any pair to inspect the same cost stack.</p></div><div className="ledger-scroll"><table><thead><tr><th scope="col">Pair</th><th scope="col">Route</th><th scope="col">Funding diff.</th><th scope="col">Costs</th><th scope="col">Modeled net</th><th scope="col">Freshness</th><th scope="col">Verdict</th></tr></thead><tbody>{opportunities.map((item) => <tr key={item.symbol} className={selected.symbol === item.symbol ? "ledger-selected" : ""}><td><button className="pair-button" onClick={() => setSelectedSymbol(item.symbol)}>{item.symbol}</button></td><td>{item.direction}</td><td>{formatBps(item.grossFundingBps)}</td><td>−{item.totalCostBps.toFixed(2)} bp</td><td className={item.modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(item.modeledNetBps)}</td><td>{Math.max(0, Math.round(item.freshnessMs / 1000))}s</td><td><span className={`ledger-status ledger-${item.status}`}>{verdictLabel(item.status)}</span></td></tr>)}</tbody></table></div></section>
+    <section className="ledger-panel" aria-labelledby="ledger-heading"><div className="panel-topline"><div><p className="micro-label">ACCESSIBLE LEDGER</p><h2 id="ledger-heading">Every verdict, in plain rows.</h2></div><p>Keyboard-select any pair to inspect the same cost stack.</p></div><div className="ledger-scroll"><table><thead><tr><th scope="col">Pair</th><th scope="col">Route</th><th scope="col">Funding diff.</th><th scope="col">Costs</th><th scope="col">Modeled net</th><th scope="col">Freshness</th><th scope="col">Verdict</th></tr></thead><tbody>{opportunities.map((item) => <tr key={item.symbol} className={selected.symbol === item.symbol ? "ledger-selected" : ""}><td><button className="pair-button" onClick={() => setSelectedSymbol(item.symbol)}>{item.symbol}</button></td><td>{item.direction}</td><td>{formatBps(item.grossFundingBps)}</td><td>−{item.totalCostBps.toFixed(2)} bp</td><td className={item.modeledNetBps > 0 ? "signal-positive" : "signal-negative"}>{formatBps(item.modeledNetBps)}</td><td>{Math.max(0, Math.round(item.freshnessMs / 1000))}s</td><td><span className={`ledger-status ledger-${item.status}`}>{verdictLabel(item.status)}</span></td></tr>)}{rows.filter((row) => !row.opportunity).map((row) => <tr key={row.symbol}><td>{row.symbol}</td><td colSpan={4}>{row.reason ?? "Waiting for validated public data."}</td><td>—</td><td><span className="ledger-status">Unavailable</span></td></tr>)}</tbody></table></div></section>
     <NewsBriefs />
     <section className="principle-band"><p><span>Read-only by design.</span> Public feeds, explicit reserves, and a visible cost stack for every pair.</p><div className="principle-band-links"><a href="/methodology">How the model works <Icon type="arrow" /></a><a href="/faq">Read the FAQ <Icon type="arrow" /></a></div></section>
     <footer><span className="footer-brand"><BrandMark />PERP VERDICT / PUBLIC BETA</span><span>MODELED · READ ONLY · NO EXECUTION</span><a className="source-link" href="https://github.com/ychetra/perp-verdict" target="_blank" rel="noreferrer"><span className="source-glyph" aria-hidden="true">&lt;&gt;</span> View source on GitHub ↗</a></footer>

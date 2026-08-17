@@ -38,6 +38,7 @@ The result is a review aid, not an instruction. `REVIEW` means that the model ha
 ## What you can use
 
 - Live public WebSocket readings from Binance USD-M Futures and Bybit linear perpetuals.
+- A server-selected universe of up to 25 active, common USDT perpetuals, ranked by the lower current 24h quote volume across Binance and Bybit. Instrument metadata, Binance funding-interval overrides, Bybit pagination, exact base assets, and matching cadence are required.
 - A scatter map, asset marks, accessible table, selected-pair evidence panel, and cost waterfall.
 - Shareable `/verdict/[pair]` Truth Cards with source timestamps and a fail-closed validation boundary.
 - A compact, server-refreshed linked-headline brief from CoinDesk, Google Blog, and Cloudflare Blog. It shows only attributed titles, dates, and outbound URLs; it never changes a funding verdict.
@@ -50,7 +51,7 @@ Perp Verdict does not place orders, connect exchange accounts, request withdrawa
 
 ## Data states and honesty boundaries
 
-The homepage has a clearly labeled seeded interactive fallback so the map remains useful while a public stream connects. Seed values are not presented as live evidence.
+The homepage has a clearly labeled four-pair seeded interactive fallback while the metadata universe or public streams connect. Seed values are not presented as live evidence. Once the validated universe is available, every additional pair waits for both venue quotes and both visible books; it cannot inherit a BTC, ETH, SOL, or XRP seed.
 
 Shareable Truth Cards use server-only REST snapshots instead. They validate both venue responses, instrument metadata, source timestamps, funding cadence, ticker skew, freshness, and enough public depth for the configured notional. A failed check renders an unavailable card; it never substitutes seed data. Snapshots use a bounded process-local cache and are not a durable historical feed.
 
@@ -61,9 +62,11 @@ app/page.tsx                         scanner entry and software metadata
 components/funding-reality-check.tsx client map, ledger, theme, and public streams
 lib/edge.ts                          fee-aware deterministic model
 lib/sample-data.ts                   conservative interactive seed assumptions
+lib/universe.ts                      server-only active-pair intersection and 24h-volume selection
 lib/server-snapshot.ts               source-stamped Truth Card validation
 app/verdict/[pair]/                  shareable read-only evidence route
 app/api/verdict/[pair]/              JSON Truth Card endpoint
+app/api/universe/                    cached public Binance × Bybit pair universe
 app/methodology, funding-arbitrage,
 app/faq                              static, indexable product education
 ```
