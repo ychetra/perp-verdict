@@ -40,6 +40,7 @@ Updated: 2026-08-17
 
 - A live Cloudflare API audit confirmed the `chetra.xyz` zone is active and proxied. Bot Fight Mode and all AI bot protection modes are disabled; the zone has no custom firewall rules and no IP access rules. Managed WAF and L7 DDoS rules remain active. Browser Integrity Check is enabled at the zone level.
 - Cloudflare does not currently manage the served `robots.txt`; Vercel's application route remains authoritative. Normal and Googlebot-identifying public requests both received HTTP 200 and valid XML from `/sitemap.xml`.
+- Cloudflare HTTP request analytics for `/sitemap.xml` also showed HTTP 200 response groups for `Googlebot` and `Google-InspectionTool` user agents. The observed 401/403/530 groups were associated with non-Google browser or Claude bot user agents. User-agent labels are not proof of Google IP ownership, but this does not implicate Cloudflare in the Search Console error.
 - No Cloudflare bypass or security change was created: there is no evidence that Cloudflare is blocking Googlebot, and bypassing Browser Integrity Check would weaken protection without an identified cause.
 
 ## Next milestone
