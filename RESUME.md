@@ -3,7 +3,7 @@
 Updated: 2026-08-17
 
 - Public source: `https://github.com/ychetra/perp-verdict`
-- Live production: `https://perp-verdict.vercel.app`
+- Live production: `https://perp.chetra.xyz` (primary); the Vercel URL remains available but declares this custom canonical.
 - Hosting: Vercel project `perp-verdict`; the first CLI deployment was promoted to production by Vercel.
 - Verified baseline: local tests, lint, production build, Vercel deployment status, HTTPS 200, and live title/description/JSON-LD.
 - Local-only `.env.local` and `.vercel/` are ignored. Never commit either.
@@ -24,6 +24,12 @@ Updated: 2026-08-17
 - Verified the public production alias end-to-end: the API returned a validated Binance/Bybit BTCUSDT snapshot with four Binance and three Bybit provenance records, comparable 8h cadence, a SHA-256 snapshot ID, and a 15-second cache reuse. The page and 1200x630 Open Graph image rendered the modeled/not-executable evidence correctly.
 - Vercel Functions execute in sin1. The default iad1 execution region returned Binance HTTP 451; sin1 returned validated public source data. This is an upstream compatibility setting, never a proxy or fallback, and every source failure remains explicitly unavailable.
 
+## 2026-08-17 custom-domain release
+
+- Attached and verified `perp.chetra.xyz` for the Vercel project through Cloudflare. HTTPS serves production, and HTTP permanently redirects to HTTPS.
+- Commit 20dc632 changes the canonical site base, Open Graph URLs, schema URLs, sitemap, and robots sitemap reference to `https://perp.chetra.xyz`. The legacy Vercel hostname now advertises the same custom canonical.
+- Cloudflare Managed robots currently permits search indexing but disallows several AI crawler user agents, including GPTBot, ClaudeBot, and Google-Extended. That is a Cloudflare policy decision, not an app rule; decide deliberately whether to allow those agents before treating GEO as complete.
+
 ## Next milestone
 
-Attach a custom domain and verify it in Google Search Console. A durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
+Verify `https://perp.chetra.xyz` in Google Search Console and decide the Cloudflare Managed robots policy for AI crawlers. A durable historical card store remains out of scope until retention, privacy, and provenance policy are designed.
